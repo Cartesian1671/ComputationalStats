@@ -1,0 +1,107 @@
+---
+title: "CS_Assign2"
+author: "ZYL"
+date: "2023-03-17"
+output: html_document
+---
+# clear all variables in workspce
+```{r setup-clear}
+rm(list=ls())
+```
+
+
+```{r setup, include=FALSE}
+# install.packages("bootstrap")  #need to install bootstrap on google colab first
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+data(law) 
+law %<>% add_column(observation = 1:nrow(law), .before = 1) 
+ggplot(law, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+```
+
+```{r zhou}
+
+# import library and data
+# install.packages('bootstrap')
+library("ggplot2")
+library("tibble")
+library("bootstrap")
+library("magrittr")
+library("gtools")
+library('tictoc') # calculate running time
+library(dplyr)
+
+data(law)
+
+# Import data & see data
+# see sample data
+
+law %<>% add_column(observation = 1:nrow(law), .before = 1)
+ggplot(law, aes(x = LSAT, y = GPA)) + 
+  geom_text(aes(label = observation), 
+            hjust = 0, vjust = 0)
+# View(law)
+
+# To use large 'n', you need to change the default recusion limit
+options(expressions=1e5)
+cmat <- combinations(300,2)
+dim(cmat) # 44850 by 2
+
+# calculate time - Method_2
+tic()
+# n - Size of the source vector
+enum_sample <- permutations(n=15, r=15, v = 1:15, set = TRUE, repeats = TRUE)
+toc()
+
+```
+
+# Import data & see data
+```{r}
+# see sample data
+
+law %<>% add_column(observation = 1:nrow(law), .before = 1)
+ggplot(law, aes(x = LSAT, y = GPA)) + 
+  geom_text(aes(label = observation), 
+            hjust = 0, vjust = 0)
+# View(law)
+```
+
+# calculate time - Method
+```{r}
+# # calculate time - Method_1
+# start_t <- Sys.time()
+# end_t <- Sys.time()
+# run_t = end_t - start_t
+# cat(run_t)
+
+# calculate time - Method_2
+tic()
+# n - Size of the source vector
+
+toc()
+```
+
+
+```{r}
+len_ob = 3
+for (i in 1:2) {
+  # i: length of source vector in permu
+  # r:Size of the target vectors
+  com_now <- combinations(n=len_ob, r=i, v = 1:len_ob, set = FALSE, repeats.allowed = FALSE)
+  for (j in 1:nrow(com_now)){
+    # n: Size of the source vector
+    # v:Source vector
+    per_now <- permutations(n=i, r=len_ob, v = com_now[j,], set = FALSE, repeats = TRUE)
+    print(per_now)
+    # calculate correlation 
+    
+  }
+  
+}
+
+com_now <- combinations(n=15, r=15, v = 1:15, set = FALSE, repeats.allowed = TRUE)
+```
