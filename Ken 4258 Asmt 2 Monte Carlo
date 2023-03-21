@@ -1,0 +1,32 @@
+# Load the required libraries
+library("ggplot2")
+library("tibble")
+library("dplyr")
+
+# Load the dataset
+law <- read.csv("law.csv")
+
+# Add an observation column
+law <- law %>% add_column(observation = 1:nrow(law), .before = 1)
+
+# Compute the Pearson's correlation coefficient
+corr <- cor(law$LSAT, law$GPA)
+
+# Define the Monte Carlo bootstrap function
+monte_carlo_func <- function(data) {
+  n <- nrow(data)
+  indices <- sample(1:n, n, replace = TRUE)
+  corr <- cor(data$LSAT[indices], data$GPA[indices])
+  return(corr)
+}
+
+# Generate the Monte Carlo bootstrap samples
+set.seed(123) # for reproducibility
+B <- 40000
+monte_carlo_results <- replicate(B, monte_carlo_func(law))
+
+# Plot the bootstrap distribution
+monte_carlo_df <- tibble(corr = monte_carlo_results)
+ggplot(monte_carlo_df, aes(x = corr)) +
+  geom_histogram(binwidth = 0.05, color = "white", fill = "grey") +
+  labs(x = "Pearson's correlation coefficient", y = "Frequency", title = "Bootstrap distribution")
