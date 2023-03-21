@@ -1,0 +1,102 @@
+---
+title: "Assignment_2_GPT"
+author: "sudi"
+date: "2023-03-21"
+output: html_document
+---
+
+# clear all variables in workspce
+
+```{r setup-clear}
+rm(list=ls())
+```
+
+# Given dataset
+
+```{r setup, include=FALSE}
+# install.packages("bootstrap")  #need to install bootstrap on google colab first
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+data(law) 
+law %<>% add_column(observation = 1:nrow(law), .before = 1) 
+ggplot(law, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+```
+
+# GPT code for Task1
+
+```{r pressure, echo=FALSE}
+# Load necessary libraries
+library(gtools)
+
+# Define a function to compute correlation for each permutation
+correlation_permutation <- function(indices, data) {
+  selected_data <- data[indices, ]
+  return(cor(selected_data$LSAT, selected_data$GPA))
+}
+
+# Create all possible permutations of data points
+n <- nrow(law)
+index_permutations <- permutations(n, n)
+
+# Compute correlation for each permutation
+correlations <- apply(index_permutations, 1, correlation_permutation, data = law)
+
+# Calculate mean and standard deviation of correlations
+mean_correlation <- mean(correlations)
+std_dev_correlation <- sd(correlations)
+
+# Print results
+cat("Mean correlation:", mean_correlation, "\n")
+cat("Standard deviation of correlation:", std_dev_correlation, "\n")
+```
+
+run above code at 2:05 am ,2:23am shows **error** on line 43. limit reached.
+
+`Error: vector memory exhausted (limit reached?)`
+
+Then it gives another code: The complete enumeration bootstrap method is indeed computationally expensive and may not be practical for this dataset. As previously mentioned, using the standard nonparametric bootstrap method is a more feasible approach. Here's the code again for your reference:
+
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Define the number of bootstrap samples
+n_bootstrap_samples <- 1000
+
+# Perform the bootstrap
+bootstrap_correlations <- numeric(n_bootstrap_samples)
+for (i in 1:n_bootstrap_samples) {
+  bootstrap_sample <- law[sample(n, replace = TRUE), ]
+  bootstrap_correlations[i] <- cor(bootstrap_sample$LSAT, bootstrap_sample$GPA)
+}
+
+# Calculate mean and standard deviation of bootstrap correlations
+mean_bootstrap_correlation <- mean(bootstrap_correlations)
+std_dev_bootstrap_correlation <- sd(bootstrap_correlations)
+
+# Print results
+cat("Mean bootstrap correlation:", mean_bootstrap_correlation, "\n")
+cat("Standard deviation of bootstrap correlation:", std_dev_bootstrap_correlation, "\n")
+
+```
+
+# plot
+
+```{r}
+# Create the plot
+colorful_histogram <- ggplot(bootstrap_correlations_df, aes(x = correlation, fill = ..count..)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.8) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "Bootstrap Distribution of Pearson's Correlation",
+       x = "Correlation",
+       y = "Count")
+
+# Display the plot
+print(colorful_histogram)
+
+
+```
