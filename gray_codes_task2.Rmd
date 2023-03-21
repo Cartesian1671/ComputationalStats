@@ -1,0 +1,101 @@
+---
+title: "Task2 Gray codes"
+author: "sudi"
+date: "2023-03-21"
+output: html_document
+---
+
+# clear all variables in workspce
+
+```{r setup-clear}
+rm(list=ls())
+```
+
+# Given dataset
+
+```{r setup, include=FALSE}
+# install.packages("bootstrap")  #need to install bootstrap on google colab first
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+data(law) 
+law %<>% add_column(observation = 1:nrow(law), .before = 1) 
+ggplot(law, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+```
+
+## Gray codes
+
+```{r pressure, echo=FALSE}
+# install.packages("bit") # if bit is not installed
+# Load necessary libraries
+library("dplyr")
+# library("bit")
+
+# Define the statistic of interest (correlation)
+correlation <- function(data) {
+  cor(data$LSAT, data$GPA)
+}
+
+
+# Define a function to generate Gray codes
+generate_gray_codes <- function(n) {
+  gray <- 0:(2^n - 1) %>% bitwXor(bitwShiftL(0:(2^n - 1), 1L))
+  return(gray)
+}
+
+# Convert Gray code to binary
+gray_to_binary <- function(gray) {
+  binary <- gray
+  while (gray != 0) {
+    gray <- bitwShiftR(gray, 1)
+    binary <- bitwXor(binary, gray)
+  }
+  return(binary)
+}
+
+# Generate all possible subsets of the dataset using Gray codes
+n <- nrow(law)
+gray_codes <- generate_gray_codes(n)
+binary_codes <- sapply(gray_codes, gray_to_binary)
+subsets <- list()
+
+for (i in 1:(2^n - 1)) {
+  binary_vector <- as.integer(intToBits(binary_codes[i]))[1:n]
+  subset <- which(binary_vector == 1)
+  subsets[[i]] <- subset
+}
+
+# Initialize a vector to store the bootstrap results
+bootstrap_results <- numeric(length = length(subsets))
+
+# Perform the complete enumeration bootstrap
+for (i in 1:length(subsets)) {
+  indices <- unlist(subsets[[i]], use.names = FALSE)
+  resampled_data <- law[indices, ]
+  bootstrap_results[i] <- correlation(resampled_data)
+}
+
+# Remove any NA values from the bootstrap results
+bootstrap_results <- bootstrap_results[!is.na(bootstrap_results)]
+
+# Calculate the mean and standard deviation of the bootstrap results
+mean_bootstrap <- mean(bootstrap_results)
+sd_bootstrap <- sd(bootstrap_results)
+
+# Print results
+cat("Mean of bootstrap correlations:", mean_bootstrap, "\n")
+cat("Standard deviation of bootstrap correlations:", sd_bootstrap, "\n")
+
+```
+
+
+it only costs a few seconds.
+# plot
+
+```{r}
+# Plot Bootstrap Distribution of Correlation Coefficients
+
+```
