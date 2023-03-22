@@ -1,0 +1,205 @@
+---
+title: "Compare bootstrap with Monte Carlo"
+author: "sudi"
+date: "2023-03-18"
+output: html_document
+---
+
+# clear all variables in workspce
+
+```{r setup-clear}
+rm(list=ls())
+```
+
+# given dataset
+```{r setup, include=FALSE}
+# install.packages("bootstrap")  #need to install bootstrap on google colab first
+library("ggplot2") 
+library("tibble") 
+library("bootstrap") 
+library("magrittr") 
+data(law) 
+law %<>% add_column(observation = 1:nrow(law), .before = 1) 
+ggplot(law, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+```
+
+# bootstrap distribution by Gray codes
+
+
+```{r}
+# Load necessary libraries
+library("dplyr")
+# library("bit")
+
+# Define the statistic of interest (correlation)
+correlation <- function(data) {
+  cor(data$LSAT, data$GPA)
+}
+
+
+# Define a function to generate Gray codes
+generate_gray_codes <- function(n) {
+  gray <- 0:(2^n - 1) %>% bitwXor(bitwShiftL(0:(2^n - 1), 1L))
+  return(gray)
+}
+
+# Convert Gray code to binary
+gray_to_binary <- function(gray) {
+  binary <- gray
+  while (gray != 0) {
+    gray <- bitwShiftR(gray, 1)
+    binary <- bitwXor(binary, gray)
+  }
+  return(binary)
+}
+
+# Generate all possible subsets of the dataset using Gray codes
+n <- nrow(law)
+gray_codes <- generate_gray_codes(n)
+binary_codes <- sapply(gray_codes, gray_to_binary)
+subsets <- list()
+
+for (i in 1:(2^n - 1)) {
+  binary_vector <- as.integer(intToBits(binary_codes[i]))[1:n]
+  subset <- which(binary_vector == 1)
+  subsets[[i]] <- subset
+}
+
+# Initialize a vector to store the bootstrap results
+bootstrap_results <- numeric(length = length(subsets))
+
+# Perform the complete enumeration bootstrap
+for (i in 1:length(subsets)) {
+  indices <- unlist(subsets[[i]], use.names = FALSE)
+  resampled_data <- law[indices, ]
+  bootstrap_results[i] <- correlation(resampled_data)
+}
+
+# Remove any NA values from the bootstrap results
+bootstrap_results <- bootstrap_results[!is.na(bootstrap_results)]
+
+
+# Summary statistics of the bootstrap distribution
+mean_bootstrap <- mean(bootstrap_results)
+sd_bootstrap <- sd(bootstrap_results)
+
+# Print results
+cat("Mean correlation of Bootstrap:", mean_bootstrap, "\n")
+cat("Standard deviation of Bootstrap:", sd_bootstrap, "\n")
+
+```
+
+## generate histogram
+
+```{r pressure, echo=FALSE}
+# Create histogram using ggplot2
+histogram_bootstrap <- ggplot(data.frame(bootstrap_results), aes(x = bootstrap_results, fill = ..count..)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.8) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Pearson's correlation coefficient", y = "Frequency", title = "Bootstrap Distribution of Correlation Coefficients") +
+  theme_minimal()
+
+# Display the histogram
+print(histogram_bootstrap)
+
+
+```
+
+# Monte Carlo distribution
+```{r}
+# Define the statistic of interest (correlation)
+correlation <- function(data) {
+  cor(data$LSAT, data$GPA)
+}
+
+# Number of Monte Carlo iterations
+n_iterations <- 40000
+
+# Initialize a vector to store the Monte Carlo results
+monte_carlo_results <- numeric(length = n_iterations)
+
+# Perform the Monte Carlo simulation
+for (i in 1:n_iterations) {
+  resampled_data <- law[sample(nrow(law), replace = TRUE), ]
+  monte_carlo_results[i] <- correlation(resampled_data)
+}
+
+# Calculate the mean and standard deviation of the Monte Carlo results
+mean_monte_carlo <- mean(monte_carlo_results)
+sd_monte_carlo <- sd(monte_carlo_results)
+
+# Print results
+cat("Mean of Monte Carlo correlations:", mean_monte_carlo, "\n")
+cat("Standard deviation of Monte Carlo correlations:", sd_monte_carlo, "\n")
+
+```
+## generate histogram
+
+
+```{r pressure, echo=FALSE}
+# Create histogram using ggplot2
+histogram_montecarlo <- ggplot(data.frame(monte_carlo_results), aes(x = monte_carlo_results, fill = ..count..)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.8) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Correlation Coefficient", y = "Frequency", title = "Monte Carlo Distribution of Correlation Coefficients") +
+  theme_minimal()
+
+# Display the histogram
+print(histogram_montecarlo)
+
+```
+# compare by plot 
+
+```{r}
+
+# Combine the two histograms into one plot
+combined_histogram <- histogram_bootstrap + 
+  geom_histogram(data = data.frame(monte_carlo_results), aes(x = monte_carlo_results, y = ..density.. * 50, fill = ..count..),
+                 bins = 50, alpha = 0.5, color = "black") + 
+  scale_fill_gradient(low = "blue", high = "red")
+
+# Display the combined histogram
+print(combined_histogram)
+
+```
+
+# compare by GPT, not run yet.
+To make the Monte Carlo and complete enumeration bootstrap results look more similar, we can try to find the observations causing the largest difference in the correlation coefficients. We can do this by iteratively removing each observation, recomputing the correlation, and comparing it to the original correlation.
+
+Here's the R code to find which observation(s) to remove:
+```{r}
+
+# Define the statistic of interest (correlation)
+correlation <- function(data) {
+  cor(data$LSAT, data$GPA)
+}
+
+# Compute the original correlation
+original_correlation <- correlation(law)
+
+# Initialize a vector to store the correlations without each observation
+correlations_without_observation <- numeric(length = nrow(law))
+
+# Iterate through each observation, remove it, and recompute the correlation
+for (i in 1:nrow(law)) {
+  data_without_observation <- law[-i, ]
+  correlations_without_observation[i] <- correlation(data_without_observation)
+}
+
+# Calculate the differences between the original correlation and the correlations without each observation
+correlation_differences <- abs(correlations_without_observation - original_correlation)
+
+# Find the observation(s) with the largest difference
+largest_difference_indices <- which.max(correlation_differences)
+
+# Print the observation(s) to remove
+cat("Observation(s) to remove:", largest_difference_indices, "\n")
+```
+
+the result indicates that removing observation 1 may make the Monte Carlo and complete enumeration bootstrap results more similar. However, I want to emphasize again that removing observations should be done cautiously and only for a justifiable reason, such as an outlier or an error in data entry. Removing data points arbitrarily may lead to biased results.
+
+Additionally, it is essential to consider the context of the problem and the dataset. If the dataset is small, removing even a single observation may have a significant impact on the results. In such cases, it's essential to investigate the underlying reasons for any discrepancies between the Monte Carlo and complete enumeration bootstrap results.
+
+It's worth noting that the comparison between the Monte Carlo and complete enumeration bootstrap might not necessarily yield very similar results in all cases, especially if the number of Monte Carlo iterations is not sufficiently large or the dataset has a complex structure. In practice, the choice between these methods would depend on the specific problem, dataset, and computational resources available.
