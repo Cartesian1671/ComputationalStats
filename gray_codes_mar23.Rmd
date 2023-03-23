@@ -1,0 +1,98 @@
+---
+title: "gray codes trial with zhou enumeration"
+author: "sudi"
+date: "2023-03-22"
+output: html_document
+---
+
+# clear all variables in workspce
+
+```{r setup-clear}
+rm(list=ls())
+```
+
+# given data
+```{r}
+# Load necessary libraries
+library("ggplot2")
+library("tibble")
+library("combinat")
+library("magrittr")
+
+# Load data
+data(law) 
+law %<>% add_column(observation = 1:nrow(law), .before = 1) 
+ggplot(law, aes(x = LSAT, y = GPA)) +
+  geom_text(aes(label = observation), 
+    hjust = 0, vjust = 0)
+
+# choose top 4 data for test
+law_new <- law[1:4,] 
+```
+
+```{r}
+
+# Load necessary libraries
+library(gtools)
+
+# Gray code generation function
+grayCodePermutations <- function(n) {
+  if (n == 1) {
+    return(matrix(c(1, 2), nrow = 2, byrow = TRUE))
+  } else {
+    prev_gray_codes <- grayCodePermutations(n - 1)
+    n_prev_rows <- nrow(prev_gray_codes)
+    new_gray_codes <- matrix(0, nrow = 2 * n_prev_rows, ncol = n)
+    
+    new_gray_codes[1:n_prev_rows, 1] <- n
+    new_gray_codes[(n_prev_rows + 1):(2 * n_prev_rows), 1] <- n - 1
+    new_gray_codes[1:(2 * n_prev_rows), 2:n] <- rbind(prev_gray_codes[, 1:(n - 1)], prev_gray_codes[n_prev_rows:1, 1:(n - 1)])
+    
+    return(new_gray_codes)
+  }
+}
+
+# Define a function to compute correlation for each permutation
+correlation_permutation <- function(indices, data) {
+  selected_data <- data[indices, ]
+  return(cor(selected_data$LSAT, selected_data$GPA))
+}
+
+
+# Create all possible Gray code permutations
+n <- nrow(law_new)
+gray_code_permutations <- grayCodePermutations(n - 1)
+
+# Compute correlation for each Gray code permutation
+correlations <- apply(gray_code_permutations, 1, correlation_permutation, data = law_new)
+
+# Remove any NA values from correlations
+correlations_results <- correlations[!is.na(correlations)]
+
+# Calculate mean and standard deviation of correlations
+mean_correlation <- mean(correlations_results)
+std_dev_correlation <- sd(correlations_results)
+
+# Print results
+cat("Mean correlation:", mean_correlation, "\n")
+cat("Standard deviation of correlation:", std_dev_correlation, "\n")
+
+```
+
+# generate histogram
+
+```{r}
+
+# Create the data frame
+correlations_df <- data.frame(correlations = correlations)
+
+# Create the colorful histogram
+histogram_plot <- ggplot(correlations_df, aes(x = correlations, fill = ..count..)) +
+  geom_histogram(bins = 50, color = "black", alpha = 0.8) +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "correlation coefficient", y = "Frequency", title = "gray code Bootstrap Distribution of Correlation Coefficients") +
+  theme_minimal()
+
+# Display the histogram
+print(histogram_plot)
+```
