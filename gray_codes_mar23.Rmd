@@ -61,7 +61,7 @@ correlation_permutation <- function(indices, data) {
 
 # Create all possible Gray code permutations
 n <- nrow(law_new)
-gray_code_permutations <- grayCodePermutations(n - 1)
+gray_code_permutations <- grayCodePermutations(n)
 
 # Compute correlation for each Gray code permutation
 correlations <- apply(gray_code_permutations, 1, correlation_permutation, data = law_new)
